@@ -1,0 +1,43 @@
+version: '3.7'
+
+networks:
+  cloudtests:
+    name: cloudtests
+
+services:
+
+  redis:
+    image: redis:latest
+    container_name: cloudtests-redis
+    command: [ "redis-server", "/redis.conf" ]
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes # TODO(DF) remove later or use for tests only
+      # TODO(DF) for tests: - REDIS_PASSWORD=password123      
+    ports:
+      - "6379:6379"
+    networks:
+      - cloudtests
+    expose:
+      - "6379"
+    volumes:
+      # - ./redis/data:/bitnami/redis/data
+      - ./redis/data:/data
+      - ./build/redis/redis.conf:/redis.conf
+
+  user-service:
+    image: usersvc-backend:latest
+    container_name: cloudtests-usersvc-backend
+    ports:
+      - "8080:8080"
+    depends_on:
+      - redis
+    restart: always
+    networks:
+      - cloudtests
+    expose:
+      - "8080"
+    environment:
+      - SVCUSER_SERVICEADDRESS=localhost:8080
+      - SVCUSER_LOGLEVEL=DEBUG
+      - SVCUSER_HTTPTIMEOUTSEC=600
+      - DB_ADDRESS=redis:6379
